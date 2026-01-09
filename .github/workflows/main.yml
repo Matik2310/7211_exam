@@ -13,18 +13,22 @@ jobs:
     # 1. Скачиваем код
     - uses: actions/checkout@v4
 
-    # 2. Показываем файлы (для проверки, что main.py существует)
-    - name: List files (Debug)
-      run: ls -R
+    # 2. Подготовка файлов (создаем assets и кладем туда вопросы)
+    # Это решит проблему с тем, что вопросы не попадают в приложение
+    - name: Prepare Assets
+      run: |
+        mkdir -p assets
+        cp questions.json assets/
+        ls -R
 
-    # 3. Ставим Java 17
+    # 3. Ставим Java (обязательно 17 версия для Android)
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
 
-    # 4. Ставим Flutter (Инструмент сборки)
+    # 4. Ставим Flutter
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
@@ -36,7 +40,7 @@ jobs:
       with:
         python-version: '3.11'
 
-    # 6. Принудительно принимаем лицензии Android (ЧАСТАЯ ПРИЧИНА ОШИБКИ 255)
+    # 6. Лицензии Android
     - name: Accept Android Licenses
       run: |
         yes | flutter doctor --android-licenses
@@ -45,17 +49,14 @@ jobs:
     - name: Install Dependencies
       run: |
         pip install flet==0.25.2
-        # Если есть requirements.txt, ставим его, если нет - пропускаем
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    # 8. Собираем APK с подробным выводом ошибок (-v)
-    # Мы явно указываем, что главный файл - main.py
-    # И добавляем questions.json в сборку
+    # 8. СБОРКА (Исправленная команда)
+    # Мы убрали 'main.py' из конца строки. Flet сам найдет его в текущей папке.
     - name: Build APK
       run: |
-        flet build apk --project-name exam_app --product --verbose --include-assets questions.json main.py
+        flet build apk --project-name exam_app --verbose
 
-    # 9. Загружаем результат
+    # 9. Загрузка файла
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
