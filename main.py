@@ -11,13 +11,14 @@ EXAM_CONFIG = {
     "ВТГ": ["037; 121-07", "038; 121-08", "022; 125-04", "150", "033", "034", "035", "036"]
 }
 
-FILES_PATH = "questions.json"
+FILES_PATH = "assets/questions.json"
+# Запасной путь, если запускаем локально на ПК
+LOCAL_PATH = "questions.json"
 
 def main(page: ft.Page):
     # --- НАСТРОЙКИ UI ---
     page.title = "Экзаменатор Онлайн"
     
-    # В версии 0.25.2 это работает отлично:
     page.theme = ft.Theme(
         color_scheme_seed="indigo", 
         visual_density=ft.ThemeVisualDensity.COMPACT
@@ -25,7 +26,6 @@ def main(page: ft.Page):
     page.theme_mode = "light"
     page.padding = 0
     page.bgcolor = "#F2F4F7"
-    # Для веба разрешаем скролл
     page.scroll = "auto"
 
     # --- ДАННЫЕ ---
@@ -34,18 +34,27 @@ def main(page: ft.Page):
     current_answers = {}
     current_topic = ""
 
+    # Пытаемся загрузить сначала из assets (для телефона), потом локально
+    loaded = False
     if os.path.exists(FILES_PATH):
         try:
             with open(FILES_PATH, 'r', encoding='utf-8') as f:
                 full_data = json.load(f)
-        except:
-            pass
+                loaded = True
+        except: pass
+    
+    if not loaded and os.path.exists(LOCAL_PATH):
+        try:
+            with open(LOCAL_PATH, 'r', encoding='utf-8') as f:
+                full_data = json.load(f)
+                loaded = True
+        except: pass
     
     if not full_data:
         page.add(ft.Container(content=ft.Text("Ошибка: questions.json пуст или не найден"), padding=20))
         return
 
-    # --- ЛОГИКА (Работает с хранилищем браузера) ---
+    # --- ЛОГИКА ---
     def save_stats(topic, correct, total):
         stats = page.client_storage.get("user_stats") or {}
         if topic not in stats: stats[topic] = {'correct': 0, 'total': 0}
@@ -66,7 +75,6 @@ def main(page: ft.Page):
             pool = full_data.get(key, [])
             
         if not pool:
-            # Старый добрый SnackBar
             page.snack_bar = ft.SnackBar(content=ft.Text("Вопросов нет"))
             page.snack_bar.open = True
             page.update()
@@ -112,12 +120,12 @@ def main(page: ft.Page):
             border_radius=12,
             padding=10,
             on_click=on_click,
-            # В 0.25.2 with_opacity работает отлично
             shadow=ft.BoxShadow(blur_radius=5, color=ft.colors.with_opacity(0.1, "black")),
             alignment=ft.alignment.center
         )
 
-    # --- ЭКРАН 1: ГЛАВНОЕ МЕНЮ ---
+    # --- ЭКРАНЫ ---
+    
     def show_menu_screen():
         page.clean()
         
@@ -226,7 +234,6 @@ def main(page: ft.Page):
                 ),
                 ft.Container(content=content_switcher, expand=True)
             ], expand=True),
-            # Стандартный NavigationBar отлично работает в 0.25.2
             ft.NavigationBar(
                 selected_index=0,
                 destinations=[
@@ -240,7 +247,6 @@ def main(page: ft.Page):
         )
         page.update()
 
-    # --- ЭКРАН 2: ТЕСТ ---
     def show_test_screen():
         page.clean()
         
@@ -255,17 +261,35 @@ def main(page: ft.Page):
 
             q = current_questions[idx]
             
+            # Создаем группу, которая будет следить за ответами
             rg = ft.RadioGroup(content=ft.Column(spacing=8))
-            rg.on_change = lambda e: current_answers.update({idx: int(e.data)})
             
+            # Функция обработки клика по КОНТЕЙНЕРУ (чтобы можно было тыкать в текст)
+            def on_option_click(e, val):
+                rg.value = val # Меняем кружочек
+                current_answers.update({idx: int(val)}) # Сохраняем ответ
+                rg.update() # Обновляем вид
+            
+            # Если ответ уже был, восстанавливаем его
             if idx in current_answers: 
                 rg.value = str(current_answers[idx])
 
+            # ИСПРАВЛЕНИЕ: Разбиваем Radio на кружок и Текст, чтобы текст переносился
             for i, opt in enumerate(q['options']):
                 rg.content.controls.append(
                     ft.Container(
-                        content=ft.Radio(value=str(i), label=opt, label_position="right"),
-                        bgcolor="white", padding=8, border_radius=8, border=ft.border.all(1, "#E0E0E0")
+                        content=ft.Row([
+                            ft.Radio(value=str(i)), # Только кружок
+                            # Текст отдельно, expand=True разрешает ему перенос строк
+                            ft.Text(opt, size=15, expand=True) 
+                        ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                        
+                        bgcolor="white", 
+                        padding=10, 
+                        border_radius=8, 
+                        border=ft.border.all(1, "#E0E0E0"),
+                        # Делаем весь блок кликабельным
+                        on_click=lambda e, val=str(i): on_option_click(e, val)
                     )
                 )
 
@@ -308,7 +332,6 @@ def main(page: ft.Page):
 
         render_step(0)
 
-    # --- ЭКРАН 3: ОБУЧЕНИЕ ---
     def show_study_screen():
         page.clean()
         
@@ -326,8 +349,9 @@ def main(page: ft.Page):
                 opts.controls.append(
                     ft.Row([
                         ft.Icon(icon, size=size, color=color),
+                        # Здесь тоже добавляем expand=True для переноса текста в обучении
                         ft.Text(opt, size=13, color=color, weight=weight, expand=True)
-                    ], vertical_alignment="start")
+                    ], vertical_alignment=ft.CrossAxisAlignment.START)
                 )
             
             lv.controls.append(
@@ -354,7 +378,6 @@ def main(page: ft.Page):
         )
         page.update()
 
-    # --- ЭКРАН 4: РЕЗУЛЬТАТ ---
     def show_result_screen():
         page.clean()
         score = sum(1 for i, q in enumerate(current_questions) if current_answers.get(i) == q['correct'])
@@ -411,9 +434,4 @@ def main(page: ft.Page):
     show_menu_screen()
 
 if __name__ == "__main__":
-    # Мы убрали host и port, чтобы Flet сам выбрал свободное место
-    try:
-        ft.app(target=main, view=ft.AppView.WEB_BROWSER)
-    except Exception as e:
-        print(f"Произошла ошибка при запуске: {e}")
-        input("Нажмите Enter, чтобы выйти...")
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER)
