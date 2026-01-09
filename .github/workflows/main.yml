@@ -10,40 +10,52 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Скачиваем твой код
+    # 1. Скачиваем код
     - uses: actions/checkout@v4
 
-    # 2. ВАЖНО: Устанавливаем Java (без нее была ошибка 255)
+    # 2. Показываем файлы (для проверки, что main.py существует)
+    - name: List files (Debug)
+      run: ls -R
+
+    # 3. Ставим Java 17
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
 
-    # 3. Устанавливаем Flutter
+    # 4. Ставим Flutter (Инструмент сборки)
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.22.0'
+        flutter-version: '3.19.0'
 
-    # 4. Устанавливаем Python
+    # 5. Ставим Python
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
-    # 5. Устанавливаем Flet и зависимости
+    # 6. Принудительно принимаем лицензии Android (ЧАСТАЯ ПРИЧИНА ОШИБКИ 255)
+    - name: Accept Android Licenses
+      run: |
+        yes | flutter doctor --android-licenses
+
+    # 7. Ставим Flet
     - name: Install Dependencies
       run: |
         pip install flet==0.25.2
+        # Если есть requirements.txt, ставим его, если нет - пропускаем
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    # 6. Собираем APK
+    # 8. Собираем APK с подробным выводом ошибок (-v)
+    # Мы явно указываем, что главный файл - main.py
+    # И добавляем questions.json в сборку
     - name: Build APK
       run: |
-        flet build apk --verbose
+        flet build apk --project-name exam_app --product --verbose --include-assets questions.json main.py
 
-    # 7. Загружаем готовый файл, чтобы ты мог скачать
+    # 9. Загружаем результат
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
