@@ -13,32 +13,25 @@ jobs:
     # 1. Скачиваем код
     - uses: actions/checkout@v4
 
-    # 2. АВТОМАТИЧЕСКОЕ ИСПРАВЛЕНИЕ ОШИБОК
-    # Мы сами создаем requirements.txt с правильной версией прямо тут.
-    # И создаем структуру папок, которая нужна Flet.
-    - name: Fix Project Structure
+    # 2. ЧИСТКА ОТ "ФРАНКЕНШТЕЙНА"
+    # Мы удаляем твой requirements.txt, если он есть, чтобы не подтянулась версия 0.80
+    # И создаем новый, правильный.
+    - name: Force Correct Versions
       run: |
-        # 1. Создаем requirements.txt принудительно
+        rm -f requirements.txt
         echo "flet==0.25.2" > requirements.txt
-        
-        # 2. Создаем папку assets
+        # Создаем папку assets и кладем туда вопросы
         mkdir -p assets
-        
-        # 3. Если есть файл вопросов, кладем в assets. Если нет - создаем пустой, чтобы сборка не упала.
-        if [ -f questions.json ]; then 
-          cp questions.json assets/
-        else 
-          echo "{}" > assets/questions.json
-        fi
+        if [ -f questions.json ]; then cp questions.json assets/; fi
 
-    # 3. Ставим Java 17 (Нужна для Android SDK)
+    # 3. Ставим Java 17
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
 
-    # 4. Ставим Flutter (версия 3.19.0 идеально дружит с Flet 0.25)
+    # 4. Ставим Flutter
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
@@ -50,28 +43,26 @@ jobs:
       with:
         python-version: '3.11'
 
-    # 6. Ставим инструменты для сборки
-    - name: Install Build Tools
-      run: |
-        pip install cookiecutter
-        pip install flet==0.25.2
-
-    # 7. Принимаем лицензии Android (иначе будет ошибка)
+    # 6. Лицензии
     - name: Accept Licenses
       run: |
         yes | flutter doctor --android-licenses
 
+    # 7. УСТАНОВКА (Строгая)
+    # Мы сначала удаляем всё, что могло встать криво, потом ставим чистую 0.25.2
+    - name: Install Dependencies
+      run: |
+        pip uninstall -y flet flet-cli flet-desktop || true
+        pip install cookiecutter
+        pip install -r requirements.txt
+
     # 8. СБОРКА
-    # Флаг --include-packages flet гарантирует, что библиотека попадет внутрь
+    # Команда специально для версии 0.25.2
     - name: Build APK
       run: |
-        flet build apk . \
-          --project-name exam_app \
-          --verbose \
-          --description "Examiner App" \
-          --include-packages flet
+        flet build apk . --project-name exam_app --verbose
 
-    # 9. Загрузка файла
+    # 9. Загрузка
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
