@@ -1,0 +1,43 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    # Установка Python
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    # Установка Flutter (нужен для Flet)
+    - name: Install Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.19.0'
+
+    # Установка Flet и подготовка
+    - name: Install Dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install flet
+
+    # Сборка APK
+    - name: Build APK
+      run: |
+        flet build apk --verbose
+
+    # Сохранение готового файла, чтобы ты мог его скачать
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release
+        path: build/apk/app-release.apk
