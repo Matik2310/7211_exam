@@ -411,4 +411,9 @@ def main(page: ft.Page):
     show_menu_screen()
 
 if __name__ == "__main__":
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER)
+    # Мы убрали host и port, чтобы Flet сам выбрал свободное место
+    try:
+        ft.app(target=main, view=ft.AppView.WEB_BROWSER)
+    except Exception as e:
+        print(f"Произошла ошибка при запуске: {e}")
+        input("Нажмите Enter, чтобы выйти...")
