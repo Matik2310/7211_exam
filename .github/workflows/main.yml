@@ -10,33 +10,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    # 1. Скачиваем твой код
+    - uses: actions/checkout@v4
 
-    # Установка Python
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    # 2. ВАЖНО: Устанавливаем Java (без нее была ошибка 255)
+    - name: Setup Java
+      uses: actions/setup-java@v4
       with:
-        python-version: '3.10'
+        distribution: 'temurin'
+        java-version: '17'
 
-    # Установка Flutter (нужен для Flet)
-    - name: Install Flutter
+    # 3. Устанавливаем Flutter
+    - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.19.0'
+        flutter-version: '3.22.0'
 
-    # Установка Flet и подготовка
+    # 4. Устанавливаем Python
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    # 5. Устанавливаем Flet и зависимости
     - name: Install Dependencies
       run: |
-        pip install -r requirements.txt
-        pip install flet
+        pip install flet==0.25.2
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    # Сборка APK
+    # 6. Собираем APK
     - name: Build APK
       run: |
         flet build apk --verbose
 
-    # Сохранение готового файла, чтобы ты мог его скачать
-    - name: Upload APK
+    # 7. Загружаем готовый файл, чтобы ты мог скачать
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: app-release
