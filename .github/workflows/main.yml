@@ -13,16 +13,13 @@ jobs:
     # 1. Скачиваем код
     - uses: actions/checkout@v4
 
-    # 2. ЧИСТКА ОТ "ФРАНКЕНШТЕЙНА"
-    # Мы удаляем твой requirements.txt, если он есть, чтобы не подтянулась версия 0.80
-    # И создаем новый, правильный.
-    - name: Force Correct Versions
+    # 2. Создаем правильную структуру папок (на всякий случай)
+    - name: Fix Structure
       run: |
-        rm -f requirements.txt
-        echo "flet==0.25.2" > requirements.txt
-        # Создаем папку assets и кладем туда вопросы
         mkdir -p assets
         if [ -f questions.json ]; then cp questions.json assets/; fi
+        # Создаем пустой файл, если его нет, чтобы не было ошибки
+        if [ ! -f assets/questions.json ]; then echo "{}" > assets/questions.json; fi
 
     # 3. Ставим Java 17
     - name: Setup Java
@@ -43,26 +40,34 @@ jobs:
       with:
         python-version: '3.11'
 
-    # 6. Лицензии
+    # 6. УНИЧТОЖЕНИЕ КОНФЛИКТОВ (Самый важный шаг)
+    # Мы удаляем flet-cli (версию 0.80), которая ломает сборку
+    - name: Nuke Conflicting Versions
+      run: |
+        pip uninstall -y flet-cli flet flet-web flet-desktop || true
+        pip install cookiecutter
+        # Ставим чистую версию 0.25.2, в которой сборщик встроен внутри
+        pip install flet==0.25.2
+
+    # 7. ПРОВЕРКА (Смотрим в логах, какая версия осталась)
+    - name: Check Flet Version
+      run: |
+        echo "Проверяем версию Flet..."
+        flet --version
+
+    # 8. Лицензии
     - name: Accept Licenses
       run: |
         yes | flutter doctor --android-licenses
 
-    # 7. УСТАНОВКА (Строгая)
-    # Мы сначала удаляем всё, что могло встать криво, потом ставим чистую 0.25.2
-    - name: Install Dependencies
-      run: |
-        pip uninstall -y flet flet-cli flet-desktop || true
-        pip install cookiecutter
-        pip install -r requirements.txt
-
-    # 8. СБОРКА
-    # Команда специально для версии 0.25.2
+    # 9. СБОРКА
+    # Используем синтаксис для старой версии (без точки, если она вызывает ошибку, или с точкой)
+    # Для 0.25.2 точка нужна.
     - name: Build APK
       run: |
         flet build apk . --project-name exam_app --verbose
 
-    # 9. Загрузка
+    # 10. Загрузка
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
