@@ -12,13 +12,23 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # 1. Готовим структуру (assets)
-    - name: Prepare Project
+    # 1. ИСПРАВЛЕНИЕ ИМЕНИ ПАПКИ
+    # Мы создаем папку "exam_app" (начинается с буквы!) и переносим всё туда.
+    # Так мы избегаем ошибки "name: 7211_exam".
+    - name: Prepare Valid Project Structure
       run: |
-        mkdir -p assets
-        if [ -f questions.json ]; then cp questions.json assets/; fi
-        # Создаем пустой файл, если его нет
-        if [ ! -f assets/questions.json ]; then echo "{}" > assets/questions.json; fi
+        mkdir exam_app
+        
+        # Копируем главный файл
+        cp main.py exam_app/
+        
+        # Создаем assets внутри новой папки
+        mkdir -p exam_app/assets
+        if [ -f questions.json ]; then cp questions.json exam_app/assets/; fi
+        if [ ! -f exam_app/assets/questions.json ]; then echo "{}" > exam_app/assets/questions.json; fi
+        
+        # Создаем requirements.txt внутри новой папки
+        echo "flet==0.25.2" > exam_app/requirements.txt
 
     # 2. Java 17
     - name: Setup Java
@@ -27,11 +37,11 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    # 3. Flutter
+    # 3. Flutter (ОБНОВИЛИ ДО 3.24.0, как просила ошибка)
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.19.0'
+        flutter-version: '3.24.0'
 
     # 4. Python
     - name: Setup Python
@@ -39,7 +49,7 @@ jobs:
       with:
         python-version: '3.11'
 
-    # 5. Чистая установка Flet 0.25.2
+    # 5. Установка Flet
     - name: Install Dependencies
       run: |
         pip uninstall -y flet flet-cli || true
@@ -51,16 +61,17 @@ jobs:
       run: |
         yes | flutter doctor --android-licenses
 
-    # 7. СБОРКА (Минималистичная)
-    # Мы убрали --project-name, так как он вызывал ошибку.
-    # Оставили только точку (.) и --verbose для логов.
+    # 7. СБОРКА ИЗ ПРАВИЛЬНОЙ ПАПКИ
+    # Мы заходим в папку exam_app (cd exam_app) и запускаем сборку там.
     - name: Build APK
       run: |
+        cd exam_app
         flet build apk . --verbose
 
     # 8. Загрузка файла
+    # Обрати внимание: путь изменился, теперь файл лежит внутри exam_app
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: app-release
-        path: build/apk/app-release.apk
+        path: exam_app/build/apk/app-release.apk
