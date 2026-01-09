@@ -10,64 +10,55 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Скачиваем код
     - uses: actions/checkout@v4
 
-    # 2. Создаем правильную структуру папок (на всякий случай)
-    - name: Fix Structure
+    # 1. Готовим структуру (assets)
+    - name: Prepare Project
       run: |
         mkdir -p assets
         if [ -f questions.json ]; then cp questions.json assets/; fi
-        # Создаем пустой файл, если его нет, чтобы не было ошибки
+        # Создаем пустой файл, если его нет
         if [ ! -f assets/questions.json ]; then echo "{}" > assets/questions.json; fi
 
-    # 3. Ставим Java 17
+    # 2. Java 17
     - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
 
-    # 4. Ставим Flutter
+    # 3. Flutter
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.19.0'
 
-    # 5. Ставим Python
+    # 4. Python
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
-    # 6. УНИЧТОЖЕНИЕ КОНФЛИКТОВ (Самый важный шаг)
-    # Мы удаляем flet-cli (версию 0.80), которая ломает сборку
-    - name: Nuke Conflicting Versions
+    # 5. Чистая установка Flet 0.25.2
+    - name: Install Dependencies
       run: |
-        pip uninstall -y flet-cli flet flet-web flet-desktop || true
+        pip uninstall -y flet flet-cli || true
         pip install cookiecutter
-        # Ставим чистую версию 0.25.2, в которой сборщик встроен внутри
         pip install flet==0.25.2
 
-    # 7. ПРОВЕРКА (Смотрим в логах, какая версия осталась)
-    - name: Check Flet Version
-      run: |
-        echo "Проверяем версию Flet..."
-        flet --version
-
-    # 8. Лицензии
+    # 6. Лицензии
     - name: Accept Licenses
       run: |
         yes | flutter doctor --android-licenses
 
-    # 9. СБОРКА
-    # Используем синтаксис для старой версии (без точки, если она вызывает ошибку, или с точкой)
-    # Для 0.25.2 точка нужна.
+    # 7. СБОРКА (Минималистичная)
+    # Мы убрали --project-name, так как он вызывал ошибку.
+    # Оставили только точку (.) и --verbose для логов.
     - name: Build APK
       run: |
-        flet build apk . --project-name exam_app --verbose
+        flet build apk . --verbose
 
-    # 10. Загрузка
+    # 8. Загрузка файла
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
