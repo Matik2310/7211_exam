@@ -1,0 +1,43 @@
+name: Flet Web Build
+on:
+  push:
+    branches: [ main, master ] # Проверь, как называется твоя главная ветка
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Flet
+        run: pip install flet
+
+      - name: Build Flet App
+        # Собираем приложение в папку dist. Указываем main.py
+        run: flet publish main.py --app-name "ExamApp" --app-short-name "Exam" --app-description "Exam App"
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: dist # Flet создает эту папку
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
