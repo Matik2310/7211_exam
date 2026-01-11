@@ -23,8 +23,9 @@ jobs:
         run: pip install flet
 
       - name: Build Flet App
-        # Собираем приложение в папку dist
-        run: flet publish main.py --app-name "7211_exam" --app-short-name "7211_exam" --app-description "7211_exam"
+        # ВАЖНО: Я добавил --base-url /7211_exam/
+        # Если твой репозиторий называется по-другому, замени 7211_exam на точное имя!
+        run: flet publish main.py --app-name "7211_exam" --base-url /7211_exam/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
