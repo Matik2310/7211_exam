@@ -5,7 +5,7 @@ import copy
 
 # --- СЮДА ВСТАВЬ ТЕКСТ ИЗ questions.json ---
 # Оставь три кавычки в начале и в конце!
-FULL_DATA_JSON = """
+FULL_DATA_JSON = r"""
 {
     "028": [
         {
@@ -7367,3 +7367,4 @@ def main(page: ft.Page):
 if __name__ == "__main__":
     # Больше не нужно указывать assets_dir, так как данные внутри кода
     ft.app(target=main, view=ft.AppView.WEB_BROWSER)
+
