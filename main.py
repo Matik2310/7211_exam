@@ -434,4 +434,4 @@ def main(page: ft.Page):
     show_menu_screen()
 
 if __name__ == "__main__":
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER)
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets")
