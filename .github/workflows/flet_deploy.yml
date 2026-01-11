@@ -24,7 +24,7 @@ jobs:
 
       - name: Build Flet App
         # Собираем приложение в папку dist
-        run: flet publish main.py --app-name "ExamApp" --app-short-name "Exam" --app-description "Exam App"
+        run: flet publish main.py --app-name "7211_exam" --app-short-name "7211_exam" --app-description "7211_exam"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
